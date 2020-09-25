@@ -18,6 +18,9 @@ public class NetworkScript : MonoBehaviour
     public int port;
     private IPEndPoint endPoint;
     public bool connected = false;
+    private bool listening = false;
+    public delegate void HandlePlayerPacket(PlayerPacket packet);
+    public HandlePlayerPacket handlePlayerPacket;
     private void Awake()
     {
         if(Insance == null)
@@ -36,17 +39,22 @@ public class NetworkScript : MonoBehaviour
         Client = new UdpClient();
         Client.Connect(ip, port);
         endPoint = new IPEndPoint(System.Net.IPAddress.Parse(ip), port);
-        sendConnectionPacket();
+        Client.Client.ReceiveTimeout = 3;
+        send<string>("Hello, I would Like to connect!");
+        listening = true;
     }
 
     public void HostServer()
     {
         endPoint = new IPEndPoint(IPAddress.Any, port);
         Client = new UdpClient(endPoint);
+        Client.Client.ReceiveTimeout = 3;
+        listening = true;
     }
 
-    public void sendPlayerPacket(PlayerPacket packet)
+    public void send<T>(T Data)
     {
+        Packet packet = Packet.CreatePacket<T>(Data);
         if (host)
         {
             string json = JsonUtility.ToJson(packet);
@@ -61,30 +69,7 @@ public class NetworkScript : MonoBehaviour
         }
     }
 
-    public void sendConnectionPacket()
-    {
-        if (host)
-        {
-            string json = "Hello, you are connected";
-            var data = Encoding.ASCII.GetBytes(json);
-            Client.Send(data, data.Length, endPoint);
-        }
-        else
-        {
-            string json = "Hello, I would like to connect";
-            var data = Encoding.ASCII.GetBytes(json);
-            Client.Send(data, data.Length);
-        }
-    }
-
-    public async Task<PlayerPacket> ReceiveAsync()
-    {
-        var result = await Client.ReceiveAsync();
-        string json = Encoding.ASCII.GetString(result.Buffer, 0, result.Buffer.Length);
-        return JsonUtility.FromJson<PlayerPacket>(json);
-    }
-
-    public PlayerPacket Receive()
+    public Packet Receive()
     {
         string json = "";
         try
@@ -94,29 +79,50 @@ public class NetworkScript : MonoBehaviour
         }
         catch(SocketException ex)
         {
-            Debug.Log(ex);
-            connected = false;
+            //Debug.Log(ex.ErrorCode);
+            /*connected = false;
             Client.Close();
-            SceneManager.LoadScene("MainMenu");
+            SceneManager.LoadScene("MainMenu");*/
         }
         catch (Exception e)
         {
             Debug.Log(e);
         }
-        return JsonUtility.FromJson<PlayerPacket>(json);
+        return JsonUtility.FromJson<Packet>(json);
     }
 
-    public async Task ReceiveConnection()
+    public void Update()
     {
-        var result = await Client.ReceiveAsync();
-        string json = Encoding.ASCII.GetString(result.Buffer, 0, result.Buffer.Length);
-        if (host)
+        if(listening)
         {
-            endPoint = result.RemoteEndPoint;
+            Packet packet = Receive();
+
+            if (packet != null)
+            {
+                switch (packet.type)
+                {
+                    case "String":
+                        {
+                            Debug.Log($"Message: {packet.getData<string>()}");
+                            connected = true;
+                            if (host)
+                            {
+                                send<string>("Hello, you are connected!");
+                            }
+                            break;
+                        }
+                    case "PlayerPacket":
+                        {
+                            handlePlayerPacket(packet.getData<PlayerPacket>());
+                            break;
+                        }
+                }
+            }
+            if(listening && !connected && !host)
+            {
+                send<string>("Hello, I would like to connect");
+            }
         }
-        connected = true;
-        Debug.Log(json);
-        Client.Client.ReceiveTimeout = 1;
     }
 
     private void OnApplicationQuit()

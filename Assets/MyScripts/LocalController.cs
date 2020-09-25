@@ -30,7 +30,7 @@ public class LocalController : MonoBehaviour
         mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Vector3 forward = Camera.main.ScreenToWorldPoint(new Vector3(mouse.x,mouse.y, 21.15f)) - transform.position;
         movement.rotation = Quaternion.LookRotation(new Vector3(forward.x,0,forward.z),Vector3.up);
-        network.sendPlayerPacket(new PlayerPacket(transform.position.x, transform.position.y, transform.position.z, transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, transform.rotation.eulerAngles.z, 0.0f, false, false));
+        network.send(new PlayerPacket(transform.position.x, transform.position.y, transform.position.z, transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, transform.rotation.eulerAngles.z, 0.0f, false, false));
     }
 
 }

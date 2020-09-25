@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
@@ -51,15 +52,6 @@ public class MainMenuScr : MonoBehaviour
     {
         connectingPannel.SetActive(true);
         buttonPannel.SetActive(false);
-
-        Task.Factory.StartNew(async () =>
-        {
-            Debug.Log("Awaiting message");
-            await network.ReceiveConnection();
-            Debug.Log("Recived Message");
-            if (network.host)
-                network.sendConnectionPacket();
-        });
     }
 
     private void loadLevel()

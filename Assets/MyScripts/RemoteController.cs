@@ -12,23 +12,20 @@ public class RemoteController : MonoBehaviour
     {
         movement = GetComponent<Movement>();
         network = NetworkScript.Insance;
+        network.handlePlayerPacket += UpdatePosistion;
     }
 
-    public void Update()
+    public void UpdatePosistion(PlayerPacket packet)
     {
-        PlayerPacket packet = network.Receive();
-        if (packet != null)
+        transform.position = new Vector3(packet.posX, packet.posY, packet.posZ);
+        transform.rotation = Quaternion.Euler(new Vector3(packet.rotX, packet.rotY, packet.rotZ));
+        if (packet.fire)
         {
-            transform.position = new Vector3(packet.posX, packet.posY, packet.posZ);
-            transform.rotation = Quaternion.Euler(new Vector3(packet.rotX, packet.rotY, packet.rotZ));
-            if (packet.fire)
-            {
-                fire(packet.shotP);
-            }
-            else if (packet.loading)
-            {
-                load(packet.shotP);
-            }
+            fire(packet.shotP);
+        }
+        else if (packet.loading)
+        {
+            load(packet.shotP);
         }
     }
 
